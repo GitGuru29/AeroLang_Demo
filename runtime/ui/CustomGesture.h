@@ -151,66 +151,10 @@ public:
     }
 
 private:
-    void analyzeGesture() {
-        if (touchHistory.size() < 2) {
-            // Single tap
-            if (onTapCallback && touchHistory.size() == 1) {
-                onTapCallback(touchHistory[0].x, touchHistory[0].y);
-            }
-            return;
-        }
+    void analyzeGesture();
+    SwipeDirection calculateDirection(float dx, float dy);
 
-        TouchPoint start = touchHistory.front();
-        TouchPoint end = touchHistory.back();
-        
-        float dx = end.x - start.x;
-        float dy = end.y - start.y;
-        float distance = std::sqrt(dx * dx + dy * dy);
-        long duration = end.timestamp - start.timestamp;
-        
-        // Check if it's a swipe
-        if (distance >= config.minDistance && duration <= config.maxDuration) {
-            float velocity = distance / (duration / 1000.0f); // pixels per second
-            
-            if (velocity >= config.velocityThreshold) {
-                SwipeDirection direction = calculateDirection(dx, dy);
-                
-                // Trigger callbacks
-                if (onSwipeCallback) {
-                    onSwipeCallback(direction);
-                }
-                
-                if (onSwipeWithVelocityCallback) {
-                    onSwipeWithVelocityCallback(direction, velocity);
-                }
-                
-                if (onCustomSwipeCallback) {
-                    onCustomSwipeCallback(start.x, start.y, end.x, end.y);
-                }
-            }
-        }
-    }
-
-    SwipeDirection calculateDirection(float dx, float dy) {
-        float angle = std::atan2(dy, dx) * 180.0f / M_PI;
-        float absDx = std::abs(dx);
-        float absDy = std::abs(dy);
-        
-        // Check for diagonal swipes
-        if (absDx > config.minDistance && absDy > config.minDistance) {
-            if (dx > 0 && dy < 0) return SwipeDirection::UP_RIGHT;
-            if (dx > 0 && dy > 0) return SwipeDirection::DOWN_RIGHT;
-            if (dx < 0 && dy < 0) return SwipeDirection::UP_LEFT;
-            if (dx < 0 && dy > 0) return SwipeDirection::DOWN_LEFT;
-        }
-        
-        // Cardinal directions
-        if (absDx > absDy) {
-            return dx > 0 ? SwipeDirection::RIGHT : SwipeDirection::LEFT;
-        } else {
-            return dy > 0 ? SwipeDirection::DOWN : SwipeDirection::UP;
-        }
-    }
+    // Internal gesture state and proprietary analysis algorithms omitted.
 };
 
 // Helper to convert direction to string

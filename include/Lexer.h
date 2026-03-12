@@ -93,27 +93,8 @@ public:
     std::vector<Token> tokenize();
     
 private:
-    std::string source;
-    size_t current;
-    int line;
-    int column;
-    
-    char peek() const;
-    char peekNext() const;
-    char advance();
-    bool isAtEnd() const;
-    bool match(char expected);
-    
-    void skipWhitespace();
-    void skipComment();
-    
-    Token makeToken(TokenType type, const std::string& lexeme);
-    Token scanToken();
-    Token scanNumber();
-    Token scanString();
-    Token scanIdentifier();
-    
-    TokenType identifierType(const std::string& text);
+    // Internal state and scanning logic omitted due to high-security proprietary details.
+    // Full implementation available under license or upon request for collaboration.
 };
 
 } // namespace aero

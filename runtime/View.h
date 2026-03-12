@@ -16,8 +16,7 @@ public:
     void setEnabled(bool enabled);
     
 protected:
-    JNIEnv* env;
-    jobject viewInstance;
+    // Internal JNI bridge members omitted.
 };
 
 // TextView

@@ -80,11 +80,7 @@ public:
     jobject getJNIIntent() const { return intentInstance; }
     
 private:
-    JNIEnv* env;
-    jobject intentInstance;
-    bool ownsInstance; // Whether we created the Intent or received it
-    
-    void initJNI(JNIEnv* environment, jobject instance, bool owns);
+    // Internal JNI instance management omitted due to high-security proprietary details.
 };
 
 } // namespace aero

@@ -50,16 +50,8 @@ public:
     void visit(Program& node) override;
     
 private:
-    std::unordered_map<std::string, Symbol> symbolTable;
-    std::vector<std::string> errors;
-    std::string currentFunctionReturnType;
-    std::string lastExpressionType;
-    
-    void addError(const std::string& message);
-    bool isDeclared(const std::string& name);
-    Symbol* getSymbol(const std::string& name);
-    void declareVariable(const std::string& name, const std::string& type, bool isMutable);
-    bool typesCompatible(const std::string& type1, const std::string& type2);
+    // Type system implementation and symbol table logic omitted due to high-security proprietary details.
+    // Public validation errors and AST traversal logic preserved for demonstration.
 };
 
 } // namespace aero

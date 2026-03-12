@@ -22,33 +22,10 @@ public:
     void init(JNIEnv* env);
     void release(JNIEnv* env);
 
-    // Cached Data Structures
-    
-    // -- View --
-    jclass viewClass;
-    jmethodID viewSetVisibility;
-    jmethodID viewSetEnabled;
-
-    // -- TextView --
-    jclass textViewClass;
-    jmethodID textViewSetText;
-    jmethodID textViewGetText;
-    jmethodID textViewSetTextSize;
-    jmethodID textViewSetTextColor;
-
-    // -- Activity --
-    jclass activityClass;
-    jmethodID activityFindViewById;
-    jmethodID activitySetContentView;
-    jmethodID activityStartActivity;
-
+    // Cached jclass and jmethodID references omitted due to high-security proprietary details.
+    // This singleton eliminates JNI resolution overhead across the bridge.
 private:
     JNICache() = default;
-    ~JNICache() = default;
-    JNICache(const JNICache&) = delete;
-    JNICache& operator=(const JNICache&) = delete;
-    
-    bool initialized = false;
 };
 
 } // namespace aero

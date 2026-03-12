@@ -18,7 +18,7 @@ class JSONObject;
  * 
  * Usage:
  *   HttpClient client;
- *   client.setHeader("Authorization", "Bearer token123");
+ *//   client.setHeader("Authorization", "Bearer token123");
  *   
  *   // Sync request
  *   Response response = client.get("https://api.example.com/users");

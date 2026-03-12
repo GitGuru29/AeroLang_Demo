@@ -68,9 +68,7 @@ public:
     static constexpr int START_FLAG_RETRY = 0x0002;
     
 protected:
-    JNIEnv* env;
-    jobject serviceInstance;
-    jclass serviceClass;
+    // Internal JNI bridge members and lifecycle management omitted.
 };
 
 /**
@@ -134,22 +132,5 @@ private:
 
 extern "C" {
 
-JNIEXPORT void JNICALL
-Java_com_aerolang_runtime_AeroService_nativeOnCreate(JNIEnv* env, jobject thiz, jstring serviceName);
-
-JNIEXPORT jint JNICALL
-Java_com_aerolang_runtime_AeroService_nativeOnStartCommand(JNIEnv* env, jobject thiz, 
-    jstring serviceName, jobject intent, jint flags, jint startId);
-
-JNIEXPORT void JNICALL
-Java_com_aerolang_runtime_AeroService_nativeOnDestroy(JNIEnv* env, jobject thiz, jstring serviceName);
-
-JNIEXPORT jboolean JNICALL
-Java_com_aerolang_runtime_AeroService_nativeOnBind(JNIEnv* env, jobject thiz, 
-    jstring serviceName, jobject intent);
-
-JNIEXPORT void JNICALL
-Java_com_aerolang_runtime_AeroService_nativeOnUnbind(JNIEnv* env, jobject thiz, 
-    jstring serviceName, jobject intent);
-
+// Native service lifecycle callbacks and bridge methods omitted.
 }
