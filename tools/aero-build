@@ -1,0 +1,310 @@
+#!/usr/bin/env bash
+# =============================================================================
+#  aero-build — AeroLang One-Command APK Builder
+#  Usage: aero-build [PROJECT_DIR] [OPTIONS]
+# =============================================================================
+
+set -euo pipefail
+
+# ── Colours ──────────────────────────────────────────────────────────────────
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
+CYAN='\033[0;36m'; BOLD='\033[1m'; RESET='\033[0m'
+
+step()  { echo -e "\n${CYAN}${BOLD}$1${RESET}"; }
+ok()    { echo -e "${GREEN}✅  $1${RESET}"; }
+warn()  { echo -e "${YELLOW}⚠️   $1${RESET}"; }
+fail()  { echo -e "${RED}❌  $1${RESET}"; exit 1; }
+
+# ── Help ──────────────────────────────────────────────────────────────────────
+usage() {
+cat <<EOF
+${BOLD}aero-build${RESET} — AeroLang One-Command APK Builder
+
+Usage:
+  aero-build [PROJECT_DIR] [OPTIONS]
+
+Arguments:
+  PROJECT_DIR       Root of the AeroLang project (default: current directory)
+
+Options:
+  --ndk PATH        Path to Android NDK (overrides ANDROID_NDK_HOME env var)
+  --sdk PATH        Path to Android SDK (overrides ANDROID_HOME env var)
+  --app-id ID       Android application ID (default: com.aerolang.app)
+  --output PATH     Output directory for the APK (default: PROJECT_DIR/build/output)
+  --release         Build a release APK (default: debug)
+  --clean           Clean build artifacts before building
+  --help, -h        Show this help message
+
+Examples:
+  aero-build
+  aero-build ./MyApp --ndk /opt/android-ndk --app-id com.example.myapp
+  aero-build ./MyApp --release --output ./dist
+
+Environment Variables:
+  ANDROID_NDK_HOME  Path to Android NDK (used if --ndk not specified)
+  ANDROID_HOME      Path to Android SDK (used if --sdk not specified)
+  AEROC_PATH        Path to the aeroc compiler binary (default: aeroc from PATH)
+EOF
+}
+
+# ── Defaults ──────────────────────────────────────────────────────────────────
+PROJECT_DIR="$(pwd)"
+NDK_PATH="${ANDROID_NDK_HOME:-}"
+SDK_PATH="${ANDROID_HOME:-}"
+APP_ID="com.aerolang.app"
+OUTPUT_DIR=""
+BUILD_TYPE="debug"
+CLEAN=false
+
+# ── Argument Parsing ──────────────────────────────────────────────────────────
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --help|-h)      usage; exit 0 ;;
+        --ndk)          NDK_PATH="$2"; shift 2 ;;
+        --sdk)          SDK_PATH="$2"; shift 2 ;;
+        --app-id)       APP_ID="$2"; shift 2 ;;
+        --output)       OUTPUT_DIR="$2"; shift 2 ;;
+        --release)      BUILD_TYPE="release"; shift ;;
+        --clean)        CLEAN=true; shift ;;
+        -*)             fail "Unknown option: $1. Run aero-build --help for usage." ;;
+        *)
+            if [[ -d "$1" ]]; then
+                PROJECT_DIR="$(realpath "$1")"
+            else
+                fail "Project directory not found: $1"
+            fi
+            shift ;;
+    esac
+done
+
+OUTPUT_DIR="${OUTPUT_DIR:-${PROJECT_DIR}/build/output}"
+BUILD_DIR="${PROJECT_DIR}/build/aerobuild"
+CPP_DIR="${BUILD_DIR}/cpp"
+OBJ_DIR="${BUILD_DIR}/obj"
+APK_DIR="${BUILD_DIR}/apk"
+
+# ── Banner ────────────────────────────────────────────────────────────────────
+echo -e ""
+echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗"
+echo -e "║        AeroLang Build System v1.0        ║"
+echo -e "╚══════════════════════════════════════════╝${RESET}"
+echo -e "  Project : ${PROJECT_DIR}"
+echo -e "  App ID  : ${APP_ID}"
+echo -e "  Type    : ${BUILD_TYPE}"
+echo -e "  Output  : ${OUTPUT_DIR}"
+echo ""
+
+# ── Dependency Checks ─────────────────────────────────────────────────────────
+step "[0/5] Checking dependencies..."
+
+AEROC="${AEROC_PATH:-$(command -v aeroc 2>/dev/null || echo "")}"
+if [[ -z "$AEROC" ]]; then
+    # Try to find aeroc relative to the script
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [[ -f "${SCRIPT_DIR}/../build/aeroc" ]]; then
+        AEROC="${SCRIPT_DIR}/../build/aeroc"
+    elif [[ -f "${PROJECT_DIR}/build/aeroc" ]]; then
+        AEROC="${PROJECT_DIR}/build/aeroc"
+    else
+        fail "aeroc compiler not found. Build it first:\n  cd ${PROJECT_DIR} && mkdir -p build && cd build && cmake .. && make aeroc"
+    fi
+fi
+ok "aeroc found: ${AEROC}"
+
+if ! command -v cmake &>/dev/null; then
+    fail "cmake not found. Install it: sudo apt install cmake"
+fi
+ok "cmake found: $(cmake --version | head -1)"
+
+if [[ -n "$NDK_PATH" ]]; then
+    if [[ ! -d "$NDK_PATH" ]]; then
+        fail "NDK path does not exist: ${NDK_PATH}"
+    fi
+    ok "Android NDK: ${NDK_PATH}"
+    HAS_NDK=true
+else
+    warn "No Android NDK specified. Native compilation step will be skipped."
+    warn "Set ANDROID_NDK_HOME or use --ndk to enable full APK build."
+    HAS_NDK=false
+fi
+
+if [[ -n "$SDK_PATH" ]]; then
+    ok "Android SDK: ${SDK_PATH}"
+    HAS_SDK=true
+else
+    warn "No Android SDK specified. APK packaging step will be skipped."
+    HAS_SDK=false
+fi
+
+# ── Clean ─────────────────────────────────────────────────────────────────────
+if [[ "$CLEAN" == true ]]; then
+    step "[−] Cleaning previous build..."
+    rm -rf "${BUILD_DIR}"
+    ok "Clean complete."
+fi
+
+mkdir -p "${CPP_DIR}" "${OBJ_DIR}" "${APK_DIR}" "${OUTPUT_DIR}"
+
+# ── Step 1: Find .aero source files ───────────────────────────────────────────
+step "[1/5] Finding AeroLang source files..."
+
+AERO_FILES=()
+while IFS= read -r -d '' f; do
+    AERO_FILES+=("$f")
+done < <(find "${PROJECT_DIR}" \
+    -name "*.aero" \
+    -not -path "*/build/*" \
+    -not -path "*/node_modules/*" \
+    -not -path "*/temp_*" \
+    -print0)
+
+if [[ ${#AERO_FILES[@]} -eq 0 ]]; then
+    fail "No .aero files found in ${PROJECT_DIR}"
+fi
+
+ok "Found ${#AERO_FILES[@]} .aero file(s):"
+for f in "${AERO_FILES[@]}"; do
+    echo "   • $(basename "$f")"
+done
+
+# ── Step 2: Transpile AeroLang → C++ ──────────────────────────────────────────
+step "[2/5] Transpiling AeroLang → C++..."
+
+FAILED=0
+for aero_file in "${AERO_FILES[@]}"; do
+    base="$(basename "$aero_file" .aero)"
+    cpp_out="${CPP_DIR}/${base}.cpp"
+    echo -n "   Compiling ${base}.aero ... "
+    if "${AEROC}" "${aero_file}" -o "${cpp_out}" 2>/tmp/aeroc_err; then
+        echo -e "${GREEN}OK${RESET}"
+    else
+        echo -e "${RED}FAILED${RESET}"
+        cat /tmp/aeroc_err | sed 's/^/     /'
+        FAILED=$((FAILED + 1))
+    fi
+done
+
+if [[ $FAILED -gt 0 ]]; then
+    fail "${FAILED} file(s) failed to transpile. Fix errors above and retry."
+fi
+ok "All files transpiled to ${CPP_DIR}/"
+
+# ── Step 3: Native C++ Compilation ───────────────────────────────────────────
+step "[3/5] Compiling native C++ code..."
+
+RUNTIME_DIR="${PROJECT_DIR}/runtime"
+INCLUDE_DIR="${PROJECT_DIR}/include"
+
+if [[ "$HAS_NDK" == true ]]; then
+    # Cross-compile for Android using NDK clang
+    NDK_CLANG="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android34-clang++"
+
+    if [[ ! -f "$NDK_CLANG" ]]; then
+        # Try to find any clang in NDK
+        NDK_CLANG="$(find "${NDK_PATH}/toolchains/llvm/prebuilt" -name "aarch64-linux-android*-clang++" 2>/dev/null | sort -V | tail -1 || echo "")"
+    fi
+
+    if [[ -z "$NDK_CLANG" || ! -f "$NDK_CLANG" ]]; then
+        fail "Could not find NDK clang. Ensure NDK is properly installed at: ${NDK_PATH}"
+    fi
+
+    ok "Using NDK compiler: $(basename "$NDK_CLANG")"
+
+    CPP_FILES=("${CPP_DIR}"/*.cpp)
+    for cpp_file in "${CPP_FILES[@]}"; do
+        base="$(basename "$cpp_file" .cpp)"
+        obj_out="${OBJ_DIR}/${base}.o"
+        echo -n "   Compiling ${base}.cpp ... "
+        if "${NDK_CLANG}" \
+            -std=c++17 \
+            -I"${INCLUDE_DIR}" \
+            -I"${RUNTIME_DIR}" \
+            -DANDROID \
+            -c "${cpp_file}" \
+            -o "${obj_out}" 2>/tmp/ndk_err; then
+            echo -e "${GREEN}OK${RESET}"
+        else
+            echo -e "${RED}FAILED${RESET}"
+            cat /tmp/ndk_err | sed 's/^/     /'
+            fail "Native compilation failed."
+        fi
+    done
+    ok "Native compilation complete."
+else
+    warn "Skipping native compilation (no NDK). Transpiled C++ files are at: ${CPP_DIR}/"
+fi
+
+# ── Step 4: APK Packaging ─────────────────────────────────────────────────────
+step "[4/5] Packaging APK..."
+
+if [[ "$HAS_SDK" == true && "$HAS_NDK" == true ]]; then
+    AAPT="${SDK_PATH}/build-tools/$(ls "${SDK_PATH}/build-tools" | sort -V | tail -1)/aapt"
+    APKSIGNER="${SDK_PATH}/build-tools/$(ls "${SDK_PATH}/build-tools" | sort -V | tail -1)/apksigner"
+    ANDROID_JAR="${SDK_PATH}/platforms/$(ls "${SDK_PATH}/platforms" | sort -V | tail -1)/android.jar"
+
+    APK_UNSIGNED="${APK_DIR}/${APP_ID}-${BUILD_TYPE}-unsigned.apk"
+    APK_FINAL="${OUTPUT_DIR}/${APP_ID}-${BUILD_TYPE}.apk"
+
+    # Minimal AndroidManifest.xml generation
+    MANIFEST="${APK_DIR}/AndroidManifest.xml"
+    cat > "${MANIFEST}" <<MANIFEST_EOF
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="${APP_ID}"
+    android:versionCode="1"
+    android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34"/>
+    <application android:label="${APP_ID}">
+        <activity android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
+MANIFEST_EOF
+
+    "${AAPT}" package \
+        -f -M "${MANIFEST}" \
+        -I "${ANDROID_JAR}" \
+        -F "${APK_UNSIGNED}" \
+        "${APK_DIR}" 2>/dev/null || true
+
+    # Sign with debug key if debug build
+    if [[ "${BUILD_TYPE}" == "debug" ]]; then
+        DEBUG_KEYSTORE="${HOME}/.android/debug.keystore"
+        if [[ -f "${DEBUG_KEYSTORE}" ]]; then
+            "${APKSIGNER}" sign \
+                --ks "${DEBUG_KEYSTORE}" \
+                --ks-pass pass:android \
+                --out "${APK_FINAL}" \
+                "${APK_UNSIGNED}" 2>/dev/null
+            ok "APK signed with debug key."
+        else
+            cp "${APK_UNSIGNED}" "${APK_FINAL}"
+            warn "No debug keystore found. APK is unsigned."
+        fi
+    fi
+
+    ok "APK created: ${APK_FINAL}"
+else
+    warn "Skipping APK packaging — SDK or NDK not available."
+    warn "Transpiled C++ files (ready for manual build): ${CPP_DIR}/"
+    APK_FINAL=""
+fi
+
+# ── Step 5: Summary ───────────────────────────────────────────────────────────
+step "[5/5] Build Summary"
+echo ""
+echo -e "  ${BOLD}Status  :${RESET} ${GREEN}SUCCESS${RESET}"
+echo -e "  ${BOLD}Files   :${RESET} ${#AERO_FILES[@]} .aero sources transpiled"
+echo -e "  ${BOLD}C++ out :${RESET} ${CPP_DIR}/"
+if [[ -n "${APK_FINAL:-}" && -f "${APK_FINAL}" ]]; then
+    APK_SIZE="$(du -sh "${APK_FINAL}" | cut -f1)"
+    echo -e "  ${BOLD}APK     :${RESET} ${APK_FINAL} (${APK_SIZE})"
+fi
+echo ""
+echo -e "${GREEN}${BOLD}🚀 Build complete!${RESET}"
+echo ""

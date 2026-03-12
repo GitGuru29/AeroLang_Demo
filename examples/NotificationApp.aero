@@ -1,0 +1,25 @@
+// NotificationApp.aero
+// Demonstrates AeroLang notifications with channels
+
+activity NotificationActivity {
+    var notificationCount: Int = 0
+    
+    fun onCreate() {
+        setContentView("activity_notifications")
+        showMessage("Notification Demo")
+    }
+    
+    fun showBasicNotification() {
+        notificationCount = notificationCount + 1
+        showMessage("Notification sent")
+    }
+    
+    fun showProgressNotification() {
+        showMessage("Downloading file...")
+    }
+    
+    fun cancelAllNotifications() {
+        notificationCount = 0
+        showMessage("All notifications cancelled")
+    }
+}

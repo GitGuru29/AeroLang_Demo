@@ -1,0 +1,82 @@
+// Example: Contact Manager using HashMap
+
+activity ContactManager {
+    var contacts: HashMap<String, String>
+    var count: Int
+    
+    fun onCreate() {
+        contacts = HashMap<String, String>()
+        count = 0
+        
+        // Add some contacts
+        addContact("Alice", "+1-555-0101")
+        addContact("Bob", "+1-555-0102")
+        addContact("Charlie", "+1-555-0103")
+        
+        showStats()
+    }
+    
+    fun addContact(name: String, phone: String) {
+        contacts.put(name, phone)
+        count = count + 1
+        showMessage("Added: " + name + " - " + phone)
+    }
+    
+    fun findContact(name: String): String {
+        if (contacts.containsKey(name)) {
+            return contacts.get(name)
+        }
+        return "Not found"
+    }
+    
+    fun removeContact(name: String) {
+        if (contacts.containsKey(name)) {
+            val phone = contacts.remove(name)
+            count = count - 1
+            showMessage("Removed: " + name)
+        }
+    }
+    
+    fun updateContact(name: String, newPhone: String) {
+        if (contacts.containsKey(name)) {
+            contacts.put(name, newPhone)
+            showMessage("Updated: " + name + " to " + newPhone)
+        }
+    }
+    
+    fun showStats() {
+        showMessage("Total contacts: " + contacts.size())
+    }
+    
+    fun listAllContacts() {
+        var message = "=== Contacts ===\n"
+        val names = contacts.keys()
+        var i = 0
+        while (i < names.size()) {
+            val name = names.get(i)
+            val phone = contacts.get(name)
+            message = message + name + ": " + phone + "\n"
+            i = i + 1
+        }
+        showMessage(message)
+    }
+    
+    fun searchByPhone(targetPhone: String): String {
+        val names = contacts.keys()
+        var i = 0
+        while (i < names.size()) {
+            val name = names.get(i)
+            val phone = contacts.get(name)
+            if (phone == targetPhone) {
+                return name
+            }
+            i = i + 1
+        }
+        return "Not found"
+    }
+    
+    fun showMessage(message: String) {
+        // Would show toast in real app
+        return
+    }
+}

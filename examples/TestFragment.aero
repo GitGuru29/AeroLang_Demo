@@ -1,0 +1,12 @@
+// Test Fragment Declaration Parsing
+fragment TestFragment {
+    var count: Int = 0
+    
+    fun onCreate() {
+        showToast("Hello")
+    }
+    
+    fun onCreateView() {
+        count = 1
+    }
+}

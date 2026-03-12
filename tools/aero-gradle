@@ -1,0 +1,288 @@
+#!/usr/bin/env bash
+# ─────────────────────────────────────────────────────────────────────────────
+#  aero-gradle — AeroLang Adaptive Gradle Plugin Generator
+#
+#  Usage:
+#    aero-gradle init [PROJECT_DIR]   Generate gradle files (auto-detects AGP version)
+#    aero-gradle check                Show current vs latest AGP/Gradle versions
+#    aero-gradle upgrade              Update gradle-wrapper.properties to latest compatible
+#    aero-gradle --help
+#
+#  Design: never hardcode a single Gradle/AGP version.
+#  Instead, query live sources + maintain a compatibility table.
+# ─────────────────────────────────────────────────────────────────────────────
+
+set -uo pipefail
+
+VERSION="1.0.0"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEMPLATES_DIR="$SCRIPT_DIR/gradle-templates"
+CACHE_FILE="${XDG_CACHE_HOME:-$HOME/.cache}/aerolang/gradle-versions.json"
+CACHE_TTL_DAYS=7
+
+# ── Color helpers ─────────────────────────────────────────────────────────────
+BOLD='\033[1m'; RESET='\033[0m'
+GREEN='\033[0;32m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; CYAN='\033[0;36m'
+
+info()  { echo -e "${CYAN}ℹ${RESET}  $*"; }
+ok()    { echo -e "${GREEN}✅ $*${RESET}"; }
+warn()  { echo -e "${YELLOW}⚠${RESET}  $*"; }
+fail()  { echo -e "${RED}✗${RESET}  $*" >&2; exit 1; }
+
+# ── AGP ↔ Gradle compatibility table ─────────────────────────────────────────
+# Format: "AGP_MAJOR_MINOR GRADLE_MIN TEMPLATE_DIR"
+# Update this table when new AGP releases land.
+declare -A AGP_TO_GRADLE=(
+    ["8.0"]="8.0"
+    ["8.1"]="8.1"
+    ["8.2"]="8.2"
+    ["8.3"]="8.4"
+    ["8.4"]="8.6"
+    ["8.5"]="8.7"
+    ["8.6"]="8.7"
+    ["8.7"]="8.9"
+    ["8.8"]="8.10"
+    ["8.9"]="8.11.1"
+    ["8.10"]="8.11.1"
+    ["9.0"]="9.1"
+    ["9.1"]="9.1"
+)
+
+# Template directory selection: AGP 9+ uses agp9/, everything else uses agp8/
+template_dir_for_agp() {
+    local agp_major="${1%%.*}"  # e.g. "8" or "9"
+    if [[ "$agp_major" -ge 9 ]]; then
+        echo "$TEMPLATES_DIR/agp9"
+    else
+        echo "$TEMPLATES_DIR/agp8"
+    fi
+}
+
+# ── Version detection ─────────────────────────────────────────────────────────
+
+# Fetch latest stable AGP from Google Maven metadata XML
+fetch_latest_agp() {
+    local url="https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/maven-metadata.xml"
+    local xml
+    xml=$(curl -sf --max-time 8 "$url" 2>/dev/null) || { echo "8.9.0"; return; }
+    # Extract latest stable (no alpha/beta/rc)
+    echo "$xml" | grep -o '<version>[0-9]*\.[0-9]*\.[0-9]*</version>' \
+        | grep -v -E '(alpha|beta|rc)' \
+        | sed 's/<[/]*version>//g' \
+        | sort -t. -k1,1n -k2,2n -k3,3n \
+        | tail -1
+}
+
+# Fetch latest stable Gradle from Gradle services API
+fetch_latest_gradle() {
+    local url="https://services.gradle.org/versions/current"
+    local json
+    json=$(curl -sf --max-time 8 "$url" 2>/dev/null) || { echo "8.11.1"; return; }
+    echo "$json" | grep -o '"version":"[^"]*"' | head -1 | cut -d'"' -f4
+}
+
+# Load or refresh version cache
+load_versions() {
+    local now
+    now=$(date +%s)
+    # Check cache freshness
+    if [[ -f "$CACHE_FILE" ]]; then
+        local mtime
+        mtime=$(stat -c %Y "$CACHE_FILE" 2>/dev/null || stat -f %m "$CACHE_FILE" 2>/dev/null || echo 0)
+        local age=$(( (now - mtime) / 86400 ))
+        if [[ $age -lt $CACHE_TTL_DAYS ]]; then
+            # Use cache
+            LATEST_AGP=$(grep -o '"agp":"[^"]*"' "$CACHE_FILE" | cut -d'"' -f4)
+            LATEST_GRADLE=$(grep -o '"gradle":"[^"]*"' "$CACHE_FILE" | cut -d'"' -f4)
+            return
+        fi
+    fi
+
+    info "Fetching latest AGP and Gradle versions..."
+    LATEST_AGP=$(fetch_latest_agp)
+    LATEST_GRADLE=$(fetch_latest_gradle)
+
+    # Write cache
+    mkdir -p "$(dirname "$CACHE_FILE")"
+    printf '{"agp":"%s","gradle":"%s","ts":%s}\n' \
+        "$LATEST_AGP" "$LATEST_GRADLE" "$now" > "$CACHE_FILE"
+}
+
+# Given an AGP version string (e.g. "8.9.0"), return the required Gradle version
+gradle_for_agp() {
+    local agp="$1"
+    local major_minor="${agp%.*}"  # "8.9.0" → "8.9"
+    local gradle="${AGP_TO_GRADLE[$major_minor]:-}"
+    if [[ -z "$gradle" ]]; then
+        # Unknown — use latest Gradle as a safe default
+        echo "$LATEST_GRADLE"
+    else
+        echo "$gradle"
+    fi
+}
+
+# ── aero.toml reader ──────────────────────────────────────────────────────────
+read_toml() {
+    local file="$1" field="$2"
+    grep -E "^$field\s*=" "$file" 2>/dev/null | head -1 | sed 's/.*=\s*//;s/["\x27]//g;s/\s*$//'
+}
+
+# ── Template renderer ─────────────────────────────────────────────────────────
+render_template() {
+    local src="$1" dst="$2"
+    # Replace {{VAR}} placeholders with exported shell variables
+    sed \
+        -e "s|{{APP_ID}}|$APP_ID|g" \
+        -e "s|{{MIN_SDK}}|$MIN_SDK|g" \
+        -e "s|{{TARGET_SDK}}|$TARGET_SDK|g" \
+        -e "s|{{VERSION_CODE}}|$VERSION_CODE|g" \
+        -e "s|{{AGP_VERSION}}|$AGP_VERSION|g" \
+        -e "s|{{GRADLE_VERSION}}|$GRADLE_VERSION|g" \
+        -e "s|{{KOTLIN_VERSION}}|$KOTLIN_VERSION|g" \
+        "$src" > "$dst"
+}
+
+# ── init command ──────────────────────────────────────────────────────────────
+cmd_init() {
+    local project_dir="${1:-.}"
+    local silent="${2:-false}"
+
+    [[ -d "$project_dir" ]] || fail "Directory not found: $project_dir"
+
+    load_versions
+
+    # Read aero.toml if present
+    local toml="$project_dir/aero.toml"
+    APP_ID="com.aerolang.app"
+    MIN_SDK="21"
+    TARGET_SDK="35"
+    VERSION_CODE="1"
+    if [[ -f "$toml" ]]; then
+        APP_ID=$(read_toml "$toml" "package_id") ; APP_ID="${APP_ID:-com.aerolang.app}"
+        MIN_SDK=$(read_toml "$toml" "min_sdk")   ; MIN_SDK="${MIN_SDK:-21}"
+        TARGET_SDK=$(read_toml "$toml" "target_sdk") ; TARGET_SDK="${TARGET_SDK:-35}"
+        VERSION_CODE=$(read_toml "$toml" "version_code") ; VERSION_CODE="${VERSION_CODE:-1}"
+    fi
+
+    AGP_VERSION="$LATEST_AGP"
+    GRADLE_VERSION=$(gradle_for_agp "$AGP_VERSION")
+    # Kotlin version — AGP 9+ requires KGP 2.x; for 8.x use 1.9.x
+    local agp_major="${AGP_VERSION%%.*}"
+    if [[ "$agp_major" -ge 9 ]]; then
+        KOTLIN_VERSION="2.2.0"
+    else
+        KOTLIN_VERSION="1.9.25"
+    fi
+
+    local tmpl_dir
+    tmpl_dir=$(template_dir_for_agp "$AGP_VERSION")
+
+    [[ -d "$tmpl_dir" ]] || fail "Template directory not found: $tmpl_dir"
+
+    [[ "$silent" != "false" ]] || echo ""
+    [[ "$silent" != "false" ]] || echo -e "${BOLD}aero-gradle${RESET} v$VERSION — AGP $AGP_VERSION / Gradle $GRADLE_VERSION"
+    [[ "$silent" != "false" ]] || echo ""
+
+    # Create directories
+    mkdir -p "$project_dir/gradle/wrapper"
+
+    for tmpl in "$tmpl_dir"/*.tmpl; do
+        [[ -f "$tmpl" ]] || continue
+        local name
+        name=$(basename "$tmpl" .tmpl)
+        local dst="$project_dir/$name"
+        render_template "$tmpl" "$dst"
+        [[ "$silent" != "false" ]] || ok "Created $name"
+    done
+
+    # gradle-wrapper.properties (always regenerated)
+    local common="$TEMPLATES_DIR/common/gradle-wrapper.properties.tmpl"
+    render_template "$common" "$project_dir/gradle/wrapper/gradle-wrapper.properties"
+    [[ "$silent" != "false" ]] || ok "Created gradle/wrapper/gradle-wrapper.properties"
+
+    [[ "$silent" != "false" ]] || echo ""
+    [[ "$silent" != "false" ]] || ok "Gradle files initialized for AGP $AGP_VERSION"
+}
+
+# ── check command ─────────────────────────────────────────────────────────────
+cmd_check() {
+    local project_dir="${1:-.}"
+    load_versions
+
+    echo ""
+    echo -e "${BOLD}AeroLang Gradle Version Status${RESET}"
+    echo "────────────────────────────────────"
+
+    # Try to read current AGP from existing build.gradle.kts
+    local current_agp="(not initialized)"
+    local bg="$project_dir/build.gradle.kts"
+    if [[ -f "$bg" ]]; then
+        current_agp=$(grep -o 'id("com.android.application") version "[^"]*"' "$bg" \
+            | grep -o '"[0-9][^"]*"' | tr -d '"' || echo "(not found)")
+    fi
+
+    echo -e "  Current AGP:  ${YELLOW}$current_agp${RESET}"
+    echo -e "  Latest  AGP:  ${GREEN}$LATEST_AGP${RESET}"
+    echo -e "  Latest  Gradle: ${GREEN}$(gradle_for_agp "$LATEST_AGP")${RESET}"
+
+    if [[ "$current_agp" == "$LATEST_AGP" ]]; then
+        echo ""
+        ok "You are using the latest AGP version."
+    else
+        echo ""
+        warn "Newer AGP available. Run: aero-gradle upgrade"
+    fi
+    echo ""
+}
+
+# ── upgrade command ───────────────────────────────────────────────────────────
+cmd_upgrade() {
+    local project_dir="${1:-.}"
+    load_versions
+
+    # Invalidate cache to force fresh fetch
+    rm -f "$CACHE_FILE"
+    load_versions
+
+    local new_gradle
+    new_gradle=$(gradle_for_agp "$LATEST_AGP")
+
+    info "Upgrading to AGP $LATEST_AGP / Gradle $new_gradle"
+
+    # Re-run init in silent mode to regenerate all files
+    cmd_init "$project_dir" "silent"
+
+    ok "Gradle files upgraded to AGP $LATEST_AGP / Gradle $new_gradle"
+    warn "Review build.gradle.kts for any API changes required by AGP $LATEST_AGP"
+}
+
+# ── help ──────────────────────────────────────────────────────────────────────
+print_help() {
+    echo -e "${BOLD}aero-gradle${RESET} v$VERSION — AeroLang Adaptive Gradle Plugin Generator"
+    echo ""
+    echo "Usage:"
+    echo "  aero-gradle init [PROJECT_DIR]   Generate gradle files (auto-detects latest AGP)"
+    echo "  aero-gradle check [PROJECT_DIR]  Show current vs latest AGP/Gradle versions"
+    echo "  aero-gradle upgrade [PROJECT_DIR] Update to the latest compatible AGP/Gradle"
+    echo "  aero-gradle --help               Show this message"
+    echo ""
+    echo "Key features:"
+    echo "  • Never hardcodes a single Gradle/AGP version"
+    echo "  • Queries Google Maven + Gradle Services API for latest stable versions"
+    echo "  • Built-in AGP ↔ Gradle compatibility table (auto-selects correct Gradle wrapper)"
+    echo "  • Selects correct build.gradle.kts template (AGP 8.x vs 9.x DSL)"
+    echo "  • Version cache expires every $CACHE_TTL_DAYS days — always uses fresh info"
+    echo "  • Reads aero.toml for package_id, min_sdk, target_sdk automatically"
+}
+
+# ── Dispatch ──────────────────────────────────────────────────────────────────
+COMMAND="${1:-help}"
+shift || true
+
+case "$COMMAND" in
+    init)    cmd_init    "${1:-}" ;;
+    check)   cmd_check   "${1:-}" ;;
+    upgrade) cmd_upgrade "${1:-}" ;;
+    --help|-h|help) print_help ;;
+    *) fail "Unknown command: $COMMAND. Run 'aero-gradle --help'." ;;
+esac

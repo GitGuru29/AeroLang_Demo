@@ -1,0 +1,66 @@
+// Counter App with REAL UI!
+
+activity CounterApp {
+    var counterText: TextView
+    var incrementBtn: Button
+    var decrementBtn: Button
+    var resetBtn: Button
+    var layout: LinearLayout
+    var count: Int
+    
+    fun onCreate() {
+        count = 0
+        
+        // Create layout
+        layout = LinearLayout(Orientation::VERTICAL)
+        layout.setPadding(40, 40, 40, 40)
+        
+        // Create counter display
+        counterText = TextView("Count: 0")
+        counterText.setTextSize(32.0)
+        layout.addView(counterText)
+        
+        // Create increment button
+        incrementBtn = Button("+ Increment")
+        incrementBtn.setOnClickListener(() => {
+            increment()
+        })
+        layout.addView(incrementBtn)
+        
+        // Create decrement button
+        decrementBtn = Button("- Decrement")
+        decrementBtn.setOnClickListener(() => {
+            decrement()
+        })
+        layout.addView(decrementBtn)
+        
+        // Create reset button
+        resetBtn = Button("Reset")
+        resetBtn.setOnClickListener(() => {
+            reset()
+        })
+        layout.addView(resetBtn)
+        
+        // Set as content view
+        setContentView(layout)
+    }
+    
+    fun increment() {
+        count = count + 1
+        updateDisplay()
+    }
+    
+    fun decrement() {
+        count = count - 1
+        updateDisplay()
+    }
+    
+    fun reset() {
+        count = 0
+        updateDisplay()
+    }
+    
+    fun updateDisplay() {
+        counterText.setText("Count: " + count)
+    }
+}

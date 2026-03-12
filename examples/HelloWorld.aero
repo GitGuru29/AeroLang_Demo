@@ -1,0 +1,14 @@
+activity MainActivity {
+    var count: Int = 0
+    var userName: String = "AeroLang User"
+    
+    fun onCreate() {
+        count = 10
+        showMessage("Hello from AeroLang!")
+    }
+    
+    fun showMessage(message: String) {
+        // This would show a toast in Android
+        return
+    }
+}

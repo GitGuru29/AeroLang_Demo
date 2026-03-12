@@ -1,0 +1,138 @@
+// Complete Material Design app demonstrating ALL UI components
+
+activity CompleteUIDemo {
+    var drawerLayout: DrawerLayout
+    var toolbar: Toolbar
+    var bottomNav: BottomNavigationView
+    var fab: FloatingActionButton
+    
+    fun onCreate() {
+        // Main drawer layout
+        drawerLayout = DrawerLayout()
+        
+        // Main content (ConstraintLayout)
+        var mainContent = ConstraintLayout()
+        
+        // Toolbar
+        toolbar = Toolbar()
+        toolbar.setTitle("Complete UI Demo")
+        toolbar.setNavigationIcon(R.drawable.menu)
+        toolbar.setNavigationOnClickListener(() => {
+            drawerLayout.openDrawer(START)
+        })
+        mainContent.addView(toolbar)
+        
+        // Content area with CardView
+        var scrollView = ScrollView()
+        var contentLayout = LinearLayout(Orientation::VERTICAL)
+        contentLayout.setPadding(20, 20, 20, 20)
+        
+        // CardView example
+        var card = CardView()
+        card.setRadius(12.0)
+        card.setElevation(8.0)
+        
+        var cardContent = LinearLayout(Orientation::VERTICAL)
+        cardContent.setPadding(16, 16, 16, 16)
+        
+        var cardTitle = TextView("Welcome!")
+        cardTitle.setTextSize(24.0)
+        cardContent.addView(cardTitle)
+        
+        var cardText = TextView("This app demonstrates all 27 UI components!")
+        cardContent.addView(cardText)
+        
+        card.addView(cardContent)
+        contentLayout.addView(card)
+        
+        // Form controls
+        var spinner = Spinner()
+        var options = ArrayList<String>()
+        options.add("Option 1")
+        options.add("Option 2")
+        options.add("Option 3")
+        spinner.setItems(options)
+        contentLayout.addView(spinner)
+        
+        // Radio buttons
+        var radioGroup = RadioGroup()
+        radioGroup.addRadioButton("Male")
+        radioGroup.addRadioButton("Female")
+        radioGroup.addRadioButton("Other")
+        contentLayout.addView(radioGroup)
+        
+        // Date/Time pickers
+        var datePicker = DatePicker()
+        datePicker.setDate(2024, 1, 15)
+        contentLayout.addView(datePicker)
+        
+        var timePicker = TimePicker()
+        timePicker.setTime(14, 30)
+        timePicker.setIs24HourView(true)
+        contentLayout.addView(timePicker)
+        
+        scrollView.addView(contentLayout)
+        mainContent.addView(scrollView)
+        
+        // Bottom Navigation
+        bottomNav = BottomNavigationView()
+        bottomNav.inflateMenu(R.menu.bottom_nav_menu)
+        bottomNav.setOnItemSelectedListener((itemId) => {
+            handleBottomNavClick(itemId)
+        })
+        mainContent.addView(bottomNav)
+        
+        // Floating Action Button
+        fab = FloatingActionButton()
+        fab.setIcon(R.drawable.add)
+        fab.setOnClickListener(() => {
+            showAddDialog()
+        })
+        mainContent.addView(fab)
+        
+        drawerLayout.addView(mainContent)
+        
+        // Navigation Drawer
+        var navView = NavigationView()
+        navView.inflateMenu(R.menu.nav_drawer_menu)
+        navView.setNavigationItemSelectedListener((itemId) => {
+            handleNavDrawerClick(itemId)
+            drawerLayout.closeDrawer(START)
+        })
+        drawerLayout.addView(navView)
+        
+        setContentView(drawerLayout)
+        
+        // Show welcome snackbar
+        Snackbar.make("Welcome to Complete UI Demo!", "EXPLORE", () => {
+            showToast("Let's explore!")
+        })
+    }
+    
+    fun handleBottomNavClick(itemId: Int) {
+        if (itemId == R.id.nav_home) {
+            showToast("Home")
+        } else if (itemId == R.id.nav_search) {
+           showToast("Search")
+        } else if (itemId == R.id.nav_profile) {
+            showToast("Profile")
+        }
+    }
+    
+    fun handleNavDrawerClick(itemId: Int) {
+        showToast("Nav item: " + itemId)
+    }
+    
+    fun showAddDialog() {
+        var dialog = AlertDialog::Builder()
+        dialog.setTitle("Add Item")
+              .setMessage("What would you like to add?")
+              .setPositiveButton("Add", () => {
+                  Snackbar.make("Item added!", "UNDO", () => {
+                      showToast("Undo add")
+                  })
+              })
+              .setNegativeButton("Cancel", () => {})
+              .show()
+    }
+}

@@ -1,0 +1,94 @@
+// Example: Tag Manager using Set for unique tags
+
+activity TagManager {
+    var allTags: HashSet<String>
+    var userTags: HashSet<String>
+    var premiumTags: HashSet<String>
+    
+    fun onCreate() {
+        allTags = HashSet<String>()
+        userTags = HashSet<String>()
+        premiumTags = HashSet<String>()
+        
+        // Add tags
+        allTags.add("coding")
+        allTags.add("design")
+        allTags.add("music")
+        
+        userTags.add("coding")
+        userTags.add("gaming")
+        
+        premiumTags.add("premium")
+        premiumTags.add("exclusive")
+        
+        showStats()
+    }
+    
+    fun addTag(tag: String): Boolean {
+        val added = userTags.add(tag)
+        if (added) {
+            allTags.add(tag)
+            showMessage("Added tag: " + tag)
+        } else {
+            showMessage("Tag already exists: " + tag)
+        }
+        return added
+    }
+    
+    fun removeTag(tag: String): Boolean {
+        val removed = userTags.remove(tag)
+        if (removed) {
+            showMessage("Removed tag: " + tag)
+        }
+        return removed
+    }
+    
+    fun hasTag(tag: String): Boolean {
+        return userTags.contains(tag)
+    }
+    
+    fun getCommonTags(): HashSet<String> {
+        return userTags.intersection(allTags)
+    }
+    
+    fun getUniqueTags(): HashSet<String> {
+        return userTags.difference(allTags)
+    }
+    
+    fun getAllUserTags(): HashSet<String> {
+        return userTags.union_(premiumTags)
+    }
+    
+    fun isPremiumUser(): Boolean {
+        // Check if user has any premium tags
+        val premium = userTags.intersection(premiumTags)
+        return premium.size() > 0
+    }
+    
+    fun showStats() {
+        showMessage("Total tags: " + allTags.size())
+        showMessage("User tags: " + userTags.size())
+        showMessage("Premium: " + isPremiumUser())
+    }
+    
+    fun listTags() {
+        var message = "Your tags:\n"
+        val tags = userTags.toVector()
+        var i = 0
+        while (i < tags.size()) {
+            message = message + "- " + tags.get(i) + "\n"
+            i = i + 1
+        }
+        showMessage(message)
+    }
+    
+    fun clearAllTags() {
+        userTags.clear()
+        showMessage("Cleared all tags")
+    }
+    
+    fun showMessage(message: String) {
+        // Would show toast in real app
+        return
+    }
+}

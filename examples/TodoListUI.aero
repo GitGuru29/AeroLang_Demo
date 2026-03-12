@@ -1,0 +1,72 @@
+// Todo List App with UI
+
+activity TodoListUI {
+    var layout: LinearLayout
+    var inputField: EditText
+    var addButton: Button
+    var tasksList: LinearLayout
+    var tasks: ArrayList<String>
+    
+    fun onCreate() {
+        tasks = ArrayList<String>()
+        
+        // Main layout
+        layout = LinearLayout(Orientation::VERTICAL)
+        layout.setPadding(20, 20, 20, 20)
+        
+        // Title
+        var title = TextView("Todo List")
+        title.setTextSize(28.0)
+        layout.addView(title)
+        
+        // Input section
+        var inputLayout = LinearLayout(Orientation::HORIZONTAL)
+        
+        inputField = EditText()
+        inputField.setHint("Enter task...")
+        inputLayout.addView(inputField)
+        
+        addButton = Button("Add")
+        addButton.setOnClickListener(() => {
+            addTask()
+        })
+        inputLayout.addView(addButton)
+        
+        layout.addView(inputLayout)
+        
+        // Tasks list container
+        tasksList = LinearLayout(Orientation::VERTICAL)
+        layout.addView(tasksList)
+        
+        setContentView(layout)
+    }
+    
+    fun addTask() {
+        val task = inputField.getText()
+        if (task != "") {
+            tasks.add(task)
+            addTaskView(task)
+            inputField.setText("")
+        }
+    }
+    
+    fun addTaskView(task: String) {
+        var taskLayout = LinearLayout(Orientation::HORIZONTAL)
+        
+        var taskText = TextView(task)
+        taskLayout.addView(taskText)
+        
+        var deleteBtn = Button("X")
+        deleteBtn.setOnClickListener(() => {
+            removeTask(task, taskLayout)
+        })
+        taskLayout.addView(deleteBtn)
+        
+        tasksList.addView(taskLayout)
+    }
+    
+    fun removeTask(task: String, view: LinearLayout) {
+        tasks.remove(task)
+        tasksList.removeView(view)
+    }
+}

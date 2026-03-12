@@ -1,0 +1,139 @@
+// Multi-Screen Navigation Demo
+// Demonstrates Intent-based navigation between activities with data passing
+
+activity MainActivity {
+    var clickCount: Int = 0
+    var userName: String = "Guest"
+    
+    fun onCreate() {
+        clickCount = 0
+        userName = "AeroLang User"
+        showToast("Welcome to Multi-Screen Navigation!")
+    }
+    
+    fun onStart() {
+        // Activity is visible
+    }
+    
+    fun navigateToProfile() {
+        // Create Intent to navigate to ProfileActivity
+        val intent = Intent(this, ProfileActivity::class)
+        
+        // Pass data to the next activity
+        intent.putExtra("userId", 42)
+        intent.putExtra("userName", userName)
+        intent.putExtra("score", 9500)
+        intent.putExtra("isPremium", true)
+        
+        // Start the profile activity
+        startActivity(intent)
+    }
+    
+    fun navigateToSettings() {
+        val intent = Intent(this, SettingsActivity::class)
+        intent.putExtra("theme", "dark")
+        startActivityForResult(intent, 100)
+    }
+    
+    fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent) {
+        if (requestCode == 100 && resultCode == RESULT_OK) {
+            val newTheme = data.getStringExtra("selectedTheme", "light")
+            showToast("Theme changed to: " + newTheme)
+        }
+    }
+}
+
+activity ProfileActivity {
+    var userId: Int = 0
+    var userName: String = ""
+    var score: Int = 0
+    var isPremium: Boolean = false
+    
+    fun onCreate() {
+        // Retrieve data from the Intent
+        val intent = getIntent()
+        
+        userId = intent.getIntExtra("userId", 0)
+        userName = intent.getStringExtra("userName", "Unknown")
+        score = intent.getIntExtra("score", 0)
+        isPremium = intent.getBooleanExtra("isPremium", false)
+        
+        // Display the received data
+        showToast("Profile: " + userName + " (ID: " + userId + ")")
+        showToast("Score: " + score + " | Premium: " + isPremium)
+    }
+    
+    fun navigateToDetails() {
+        val intent = Intent(this, DetailActivity::class)
+        intent.putExtra("userId", userId)
+        startActivity(intent)
+    }
+    
+    fun goBack() {
+        // Return to MainActivity
+        finish()
+    }
+}
+
+activity DetailActivity {
+    var userId: Int = 0
+    
+    fun onCreate() {
+        val intent = getIntent()
+        userId = intent.getIntExtra("userId", 0)
+        
+        showToast("Viewing details for user: " + userId)
+    }
+    
+    fun shareProfile() {
+        // Create implicit intent to share
+        val shareIntent = Intent(Intent.ACTION_SEND)
+        shareIntent.setType("text/plain")
+        shareIntent.putExtra("android.intent.extra.TEXT", 
+            "Check out this user profile!")
+        
+        startActivity(shareIntent)
+    }
+    
+    fun openWebsite() {
+        // Open URL with implicit intent
+        val webIntent = Intent(Intent.ACTION_VIEW)
+        webIntent.setData("https://aerolang.dev")
+        startActivity(webIntent)
+    }
+    
+    fun goBackToMain() {
+        // Return all the way back to MainActivity
+        val intent = Intent(this, MainActivity::class)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        startActivity(intent)
+        finish()
+    }
+}
+
+activity SettingsActivity {
+    var currentTheme: String = "light"
+    
+    fun onCreate() {
+        val intent = getIntent()
+        currentTheme = intent.getStringExtra("theme", "light")
+        
+        showToast("Current theme: " + currentTheme)
+    }
+    
+    fun applyTheme(theme: String) {
+        currentTheme = theme
+        
+        // Return result to caller
+        val resultIntent = Intent(this, MainActivity::class)
+        resultIntent.putExtra("selectedTheme", currentTheme)
+        
+        setResult(RESULT_OK, resultIntent)
+        finish()
+    }
+    
+    fun cancel() {
+        setResult(RESULT_CANCELED)
+        finish()
+    }
+}

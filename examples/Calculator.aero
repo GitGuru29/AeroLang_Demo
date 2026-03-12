@@ -1,0 +1,31 @@
+class Calculator {
+    fun add(a: Int, b: Int): Int {
+        return a + b
+    }
+    
+    fun subtract(a: Int, b: Int): Int {
+        return a - b
+    }
+    
+    fun multiply(a: Int, b: Int): Int {
+        return a * b
+    }
+    
+    fun divide(a: Int, b: Int): Int {
+        return a / b
+    }
+}
+
+activity CalculatorActivity {
+    var calc: Calculator
+    var result: Int = 0
+    
+    fun onCreate() {
+        result = calc.add(10, 5)
+        showResult()
+    }
+    
+    fun showResult() {
+        showToast("Result: " + result)
+    }
+}

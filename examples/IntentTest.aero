@@ -1,0 +1,11 @@
+// Simple test - no val keyword to avoid parsing issue
+activity TestActivity {
+    fun onCreate() {
+        showToast("Hello")
+    }
+    
+    fun testThis() {
+        // Test 'this' keyword
+        startActivity(this)
+    }
+}

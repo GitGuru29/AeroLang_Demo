@@ -1,0 +1,143 @@
+// Tinder-style card swipe app with custom gestures
+
+activity CardSwipeApp {
+    var gestureListener: CustomGestureListener
+    var cardView: View
+    var cardText: TextView
+    var likeCount: Int
+    var dislikeCount: Int
+    var currentCard: Int
+    
+    fun onCreate() {
+        likeCount = 0
+        dislikeCount = 0
+        currentCard = 0
+        
+        var layout = LinearLayout(Orientation::VERTICAL)
+        layout.setPadding(30, 30, 30, 30)
+        
+        var title = TextView("Swipe App")
+        title.setTextSize(32.0)
+        layout.addView(title)
+        
+        var instructions = TextView("⬅️ Swipe Left: Dislike | Swipe Right: Like ➡️")
+        layout.addView(instructions)
+        
+        // Card view
+        cardView = LinearLayout(Orientation::VERTICAL)
+        cardView.setPadding(40, 40, 40, 40)
+        
+        cardText = TextView("Card #1")
+        cardText.setTextSize(24.0)
+        cardView.addView(cardText)
+        
+        layout.addView(cardView)
+        
+        // Stats
+        var statsText = TextView("Likes: 0 | Dislikes: 0")
+        layout.addView(statsText)
+        
+        // Setup custom gesture listener
+        gestureListener = CustomGestureListener()
+        
+        // Configure swipe sensitivity
+        gestureListener.setMinSwipeDistance(150.0)
+                      .setMaxSwipeDuration(600.0)
+                      .setVelocityThreshold(200.0)
+                      .setAngleThreshold(30.0)
+        
+        // Swipe RIGHT = Like
+        gestureListener.onSwipeWithVelocity((direction, velocity) => {
+            if (direction == SwipeDirection::RIGHT) {
+                onLike(velocity)
+            } else if (direction == SwipeDirection::LEFT) {
+                onDislike(velocity)
+            } else if (direction == SwipeDirection::UP) {
+                onSuperLike(velocity)
+            } else if (direction == SwipeDirection::DOWN) {
+                onSkip()
+            }
+        })
+        
+        // Double tap = Super like
+        gestureListener.onDoubleTap((x, y) => {
+            onSuperLike(1000.0)
+        })
+        
+        // Long press = Show info
+        gestureListener.onLongPress((x, y, duration) => {
+            showCardInfo()
+        })
+        
+        // Custom diagonal swipes
+        gestureListener.onCustomSwipe((x1, y1, x2, y2) => {
+            handleCustomSwipe(x1, y1, x2, y2)
+        })
+        
+        setContentView(layout)
+    }
+    
+    fun onLike(velocity: Float) {
+        likeCount = likeCount + 1
+        
+        if (velocity > 500.0) {
+            showToast("💚 FAST LIKE! (" + velocity + " px/s)")
+        } else {
+            showToast("❤️ Liked!")
+        }
+        
+        nextCard()
+    }
+    
+    fun onDislike(velocity: Float) {
+        dislikeCount = dislikeCount + 1
+        
+        if (velocity > 500.0) {
+            showToast("💔 FAST DISLIKE! (" + velocity + " px/s)")
+        } else {
+            showToast("👎 Disliked")
+        }
+        
+        nextCard()
+    }
+    
+    fun onSuperLike(velocity: Float) {
+        likeCount = likeCount + 3
+        showToast("⭐ SUPER LIKE! +3 points")
+        nextCard()
+    }
+    
+    fun onSkip() {
+        showToast("⏭️ Skipped")
+        nextCard()
+    }
+    
+    fun nextCard() {
+        currentCard = currentCard + 1
+        cardText.setText("Card #" + currentCard)
+    }
+    
+    fun handleCustomSwipe(x1: Float, y1: Float, x2: Float, y2: Float) {
+        val dx = x2 - x1
+        val dy = y2 - y1
+        
+        // Diagonal up-right = Favorite
+        if (dx > 100.0 && dy < -100.0) {
+            showToast("⭐ Added to Favorites!")
+            likeCount = likeCount + 2
+        }
+        
+        // Diagonal down-left = Block
+        if (dx < -100.0 && dy > 100.0) {
+            showToast("🚫 Blocked!")
+        }
+    }
+    
+    fun showCardInfo() {
+        var dialog = AlertDialog::Builder()
+        dialog.setTitle("Card Info")
+              .setMessage("Card #" + currentCard + "\nLikes: " + likeCount + "\nDislikes: " + dislikeCount)
+              .setPositiveButton("OK", () => {})
+              .show()
+    }
+}

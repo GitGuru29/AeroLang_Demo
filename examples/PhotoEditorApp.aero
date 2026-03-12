@@ -1,0 +1,120 @@
+// Photo Editor with custom multi-touch gestures
+
+activity PhotoEditorApp {
+    var gestureListener: CustomGestureListener
+    var imageView: ImageView
+    var zoomLevel: Float
+    var rotationAngle: Float
+    
+    fun onCreate() {
+        zoomLevel = 1.0
+        rotationAngle = 0.0
+        
+        var layout = LinearLayout(Orientation::VERTICAL)
+        layout.setPadding(20, 20, 20, 20)
+        
+        var title = TextView("Photo Editor")
+        title.setTextSize(28.0)
+        layout.addView(title)
+        
+        var instructions = TextView("Pinch to zoom | Rotate with 2 fingers | Swipe for filters")
+        instructions.setTextSize(12.0)
+        layout.addView(instructions)
+        
+        // Image view
+        imageView = ImageView()
+        imageView.setImageResource(R.drawable.sample_photo)
+        imageView.setScaleType(1)
+        layout.addView(imageView)
+        
+        // Controls
+        var controlsLayout = LinearLayout(Orientation::HORIZONTAL)
+        
+        var resetBtn = Button("Reset")
+        resetBtn.setOnClickListener(() => {
+            resetImage()
+        })
+        controlsLayout.addView(resetBtn)
+        
+        var saveBtn = Button("Save")
+        saveBtn.setOnClickListener(() => {
+            saveImage()
+        })
+        controlsLayout.addView(saveBtn)
+        
+        layout.addView(controlsLayout)
+        
+        // Setup custom gestures
+        setupGestures()
+        
+        setContentView(layout)
+    }
+    
+    fun setupGestures() {
+        gestureListener = CustomGestureListener()
+        
+        // Pinch to zoom
+        gestureListener.onPinch((scale, distance) => {
+            zoomLevel = zoomLevel * scale
+            applyZoom(zoomLevel)
+            showToast("Zoom: " + zoomLevel + "x")
+        })
+        
+        // Rotate gesture
+        gestureListener.onRotate((angle) => {
+            rotationAngle = rotationAngle + angle
+            applyRotation(rotationAngle)
+            showToast("Rotation: " + rotationAngle + "°")
+        })
+        
+        // Swipe for filters
+        gestureListener.setMinSwipeDistance(200.0)
+                      .onSwipe((direction) => {
+                          applyFilter(direction)
+                      })
+        
+        // Double tap to fit
+        gestureListener.onDoubleTap((x, y) => {
+            fitToScreen()
+        })
+    }
+    
+    fun applyZoom(zoom: Float) {
+        // Apply zoom to imageView
+        showToast("Zoomed to " + zoom + "x")
+    }
+    
+    fun applyRotation(angle: Float) {
+        // Apply rotation to imageView
+        showToast("Rotated " + angle + "°")
+    }
+    
+    fun applyFilter(direction: SwipeDirection) {
+        if (direction == SwipeDirection::RIGHT) {
+            showToast("🎨 Filter: Warm")
+        } else if (direction == SwipeDirection::LEFT) {
+            showToast("🎨 Filter: Cool")
+        } else if (direction == SwipeDirection::UP) {
+            showToast("🎨 Filter: Bright")
+        } else if (direction == SwipeDirection::DOWN) {
+            showToast("🎨 Filter: Dark")
+        }
+    }
+    
+    fun fitToScreen() {
+        zoomLevel = 1.0
+        rotationAngle = 0.0
+        applyZoom(1.0)
+        applyRotation(0.0)
+        showToast("📐 Fit to screen")
+    }
+    
+    fun resetImage() {
+        fitToScreen()
+        showToast("Reset all edits")
+    }
+    
+    fun saveImage() {
+        showToast("💾 Image saved!")
+    }
+}
