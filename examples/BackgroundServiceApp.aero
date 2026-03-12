@@ -1,0 +1,40 @@
+// BackgroundServiceApp.aero
+// Demonstrates AeroLang background services
+
+service DataSyncService {
+    var syncInterval: Int = 30000
+    var isSyncing: Boolean = false
+    
+    fun onCreate() {
+        showMessage("DataSyncService created")
+    }
+    
+    fun syncData() {
+        isSyncing = true
+        showMessage("Syncing data in background...")
+    }
+    
+    fun stopSync() {
+        isSyncing = false
+        showMessage("DataSyncService stopped")
+    }
+}
+
+activity BackgroundServiceActivity {
+    var isServiceRunning: Boolean = false
+    
+    fun onCreate() {
+        setContentView("activity_background_service")
+        showMessage("Background Service Demo")
+    }
+    
+    fun startSyncService() {
+        showMessage("Starting sync service...")
+        isServiceRunning = true
+    }
+    
+    fun stopSyncService() {
+        showMessage("Stopping sync service...")
+        isServiceRunning = false
+    }
+}

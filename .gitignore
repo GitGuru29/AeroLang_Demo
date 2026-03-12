@@ -1,0 +1,63 @@
+# Build directories
+build/
+cmake-build-*/
+*.ninja
+*.ninja_deps
+*.ninja_log
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Compiled files
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Executables
+aeroc
+test_lexer
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.cpp.gen
+output.cpp
+
+# Sensitive/Private
+config/secrets.json
+.env
+*.key
+*.pem
+
+# NDK specific (if you want to keep NDK paths private)
+# local.properties
+# ndk.properties
+
+# User-specific test files
+test_*.aero
+my_*.aero
+
+# Private/Internal Files
+build_output.txt
+GITHUB_SETUP.md
+github_upload_guide.md
+github_security_strategy.md
+verification.md
+upload.sh
+cleanup_repo.sh
+*.log

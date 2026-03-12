@@ -1,0 +1,55 @@
+// Example demonstrating List collection usage
+
+activity TodoListApp {
+    var tasks: List<String>
+    var completedCount: Int
+    
+    fun onCreate() {
+        tasks = ArrayList<String>()
+        completedCount = 0
+        
+        // Add some tasks
+        tasks.add("Buy groceries")
+        tasks.add("Write code")
+        tasks.add("Work out")
+        
+        showMessage("Created todo list with " + tasks.size() + " tasks")
+    }
+    
+    fun addTask(task: String) {
+        tasks.add(task)
+        showMessage("Added: " + task)
+    }
+    
+    fun completeTask(index: Int) {
+        if (index >= 0 && index < tasks.size()) {
+            val task = tasks.get(index)
+            tasks.removeAt(index)
+            completedCount = completedCount + 1
+            showMessage("Completed: " + task)
+        }
+    }
+    
+    fun getTotalTasks(): Int {
+        return tasks.size()
+    }
+    
+    fun getStats(): String {
+        return "Total: " + getTotalTasks() + ", Completed: " + completedCount
+    }
+    
+    fun showAllTasks() {
+        var message = "Tasks:\n"
+        var i = 0
+        while (i < tasks.size()) {
+            message = message + (i + 1) + ". " + tasks.get(i) + "\n"
+            i = i + 1
+        }
+        showMessage(message)
+    }
+    
+    fun showMessage(message: String) {
+        // Would show toast in real app
+        return
+    }
+}

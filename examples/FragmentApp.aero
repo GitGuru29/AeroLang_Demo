@@ -1,0 +1,120 @@
+// Fragment Demo App
+// Demonstrates fragment usage and transactions
+
+activity MainActivity {
+    fun onCreate() {
+        showToast("Fragment Demo Starting")
+        
+        // Load initial fragment
+        loadHomeFragment()
+    }
+    
+    fun loadHomeFragment() {
+        val fragmentManager = getSupportFragmentManager()
+        val transaction = fragmentManager.beginTransaction()
+        
+        val homeFragment = HomeFragment()
+        transaction.replace(R.id.fragment_container, homeFragment, "home")
+        transaction.commit()
+    }
+    
+    fun loadProfileFragment(userId: Int) {
+        val fragmentManager = getSupportFragmentManager()
+        val transaction = fragmentManager.beginTransaction()
+        
+        // Create fragment with arguments
+        val profileFragment = ProfileFragment()
+        val args = Intent()
+        args.putExtra("userId", userId)
+        profileFragment.setArguments(args)
+        
+        // Replace with animation
+        transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN)
+        transaction.replace(R.id.fragment_container, profileFragment, "profile")
+        transaction.addToBackStack("profile")
+        transaction.commit()
+    }
+    
+    fun loadSettingsFragment() {
+        val fragmentManager = getSupportFragmentManager()
+        val transaction = fragmentManager.beginTransaction()
+        
+        val settingsFragment = SettingsFragment()
+        transaction.replace(R.id.fragment_container, settingsFragment)
+        transaction.addToBackStack("settings")
+        transaction.commit()
+    }
+}
+
+fragment HomeFragment {
+    fun onCreate() {
+        // Fragment initialization
+    }
+    
+    fun onCreateView() {
+        // Inflate fragment layout
+        showToast("Home Fragment Created")
+    }
+    
+    fun onViewCreated() {
+        // Setup views and listeners
+    }
+    
+    fun navigateToProfile() {
+        // Get parent activity and navigate
+        val activity = getActivity()
+        if (activity != null) {
+            activity.loadProfileFragment(123)
+        }
+    }
+    
+    fun onDestroy() {
+        // Cleanup
+    }
+}
+
+fragment ProfileFragment {
+    var userId: Int = 0
+    var userName: String = ""
+    
+    fun onCreate() {
+        // Get arguments passed from activity
+        val args = getArguments()
+        if (args != null) {
+            userId = args.getIntExtra("userId", 0)
+        }
+    }
+    
+    fun onCreateView() {
+        showToast("Profile Fragment for user: " + userId)
+    }
+    
+    fun loadUserData() {
+        // In real app, fetch from database/API
+        if (userId == 123) {
+            userName = "John Doe"
+        }
+    }
+    
+    fun onResume() {
+        loadUserData()
+    }
+}
+
+fragment SettingsFragment {
+    var currentTheme: String = "light"
+    
+    fun onCreateView() {
+        showToast("Settings Fragment")
+    }
+    
+    fun applyTheme(theme: String) {
+        currentTheme = theme
+        showToast("Theme changed to: " + currentTheme)
+    }
+    
+    fun goBack() {
+        val fragmentManager = getActivity().getSupportFragmentManager()
+        fragmentManager.popBackStack()
+    }
+}

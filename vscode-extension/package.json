@@ -1,0 +1,235 @@
+{
+  "name": "aerolang",
+  "displayName": "AeroLang",
+  "description": "Language support for AeroLang - Native Android Development Language",
+  "version": "2.0.0",
+  "publisher": "aerolang",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "AeroLang Configuration",
+      "properties": {
+        "aerolang.androidSdkPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the Android SDK installation directory."
+        },
+        "aerolang.androidNdkPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the Android NDK installation directory."
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "aerolang",
+        "aliases": [
+          "AeroLang",
+          "aerolang"
+        ],
+        "extensions": [
+          ".aero"
+        ],
+        "icon": {
+          "light": "./icons/aerolang.svg",
+          "dark": "./icons/aerolang.svg"
+        },
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "aerolang",
+        "scopeName": "source.aerolang",
+        "path": "./syntaxes/aerolang.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "aerolang.compile",
+        "title": "AeroLang: Compile to C++"
+      },
+      {
+        "command": "aerolang.build",
+        "title": "AeroLang: Build Android APK"
+      },
+      {
+        "command": "aerolang.deploy",
+        "title": "AeroLang: Build & Deploy to Device",
+        "icon": "$(rocket)"
+      },
+      {
+        "command": "aerolang.refreshDevices",
+        "title": "Refresh Devices",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "aerolang.selectDevice",
+        "title": "Select Target Device",
+        "icon": "$(device-mobile)"
+      },
+      {
+        "command": "aerolang.launchEmulator",
+        "title": "Launch Emulator",
+        "icon": "$(vm)"
+      },
+      {
+        "command": "aerolang.installApk",
+        "title": "Install APK on Device",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "aerolang.showLogcat",
+        "title": "Show Device Logcat",
+        "icon": "$(output)"
+      },
+      {
+        "command": "aerolang.clearLogcat",
+        "title": "Clear Logcat",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "aerolang.showDeviceScreen",
+        "title": "Show Device Screen",
+        "icon": "$(device-desktop)"
+      },
+      {
+        "command": "aerolang.initGradle",
+        "title": "AeroLang: Initialize Gradle Files",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "aerolang.debugAero",
+        "title": "AeroLang: Debug App",
+        "icon": "$(bug)"
+      }
+    ],
+    "views": {
+      "aerolang-sidebar": [
+        {
+          "id": "aerolangDevices",
+          "name": "Devices & Emulators",
+          "icon": "$(device-mobile)"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "aerolang-sidebar",
+          "title": "AeroLang",
+          "icon": "resources/icon.png"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "aerolang.refreshDevices",
+          "when": "view == aerolangDevices",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "aerolang.compile",
+          "when": "editorLangId == aerolang"
+        },
+        {
+          "command": "aerolang.build"
+        },
+        {
+          "command": "aerolang.deploy"
+        },
+        {
+          "command": "aerolang.initGradle"
+        },
+        {
+          "command": "aerolang.debugAero",
+          "when": "editorLangId == aerolang"
+        }
+      ]
+    },
+    "debuggers": [
+      {
+        "type": "aerolang",
+        "label": "AeroLang Debugger",
+        "program": "./src/AeroDebugAdapter.js",
+        "runtime": "node",
+        "languages": [
+          "aerolang"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Absolute path to the .aero file to debug.",
+                "default": "${file}"
+              },
+              "workspaceRoot": {
+                "type": "string",
+                "description": "Project root directory.",
+                "default": "${workspaceFolder}"
+              },
+              "device": {
+                "type": "string",
+                "description": "ADB device serial (empty = first connected device).",
+                "default": ""
+              },
+              "gdbPath": {
+                "type": "string",
+                "description": "Path to gdb binary. Auto-detected from NDK if empty.",
+                "default": ""
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Break on first statement.",
+                "default": false
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "aerolang",
+            "request": "launch",
+            "name": "Debug AeroLang App",
+            "program": "${file}",
+            "workspaceRoot": "${workspaceFolder}",
+            "device": "",
+            "stopOnEntry": false
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "AeroLang: Launch",
+            "description": "Debug an AeroLang application.",
+            "body": {
+              "type": "aerolang",
+              "request": "launch",
+              "name": "Debug AeroLang App",
+              "program": "^\"${file}\"",
+              "workspaceRoot": "^\"${workspaceFolder}\""
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "main": "./extension.js",
+  "dependencies": {
+    "ws": "^8.19.0",
+    "@vscode/debugadapter": "^1.68.0"
+  }
+}

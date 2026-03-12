@@ -1,0 +1,94 @@
+// Game with gesture controls
+
+activity GestureGameApp {
+    var gameView: View
+    var gestureDetector: GestureDetector
+    var scoreText: TextView
+    var score: Int
+    
+    fun onCreate() {
+        score = 0
+        
+        var layout = LinearLayout(Orientation::VERTICAL)
+        layout.setPadding(20, 20, 20, 20)
+        
+        var title = TextView("Gesture Game")
+        title.setTextSize(28.0)
+        layout.addView(title)
+        
+        scoreText = TextView("Score: 0")
+        scoreText.setTextSize(20.0)
+        layout.addView(scoreText)
+        
+        var instructions = TextView("Tap, swipe, or long press to score!")
+        layout.addView(instructions)
+        
+        // Create gesture detector
+        gestureDetector = GestureDetector()
+        
+        gestureDetector.setOnTapListener((x, y) => {
+            onTap(x, y)
+        })
+        
+        gestureDetector.setOnLongPressListener((x, y) => {
+            onLongPress(x, y)
+        })
+        
+        gestureDetector.setOnSwipeListener((x1, y1, x2, y2) => {
+            onSwipe(x1, y1, x2, y2)
+        })
+        
+        gestureDetector.setOnScrollListener((x, y, dx, dy) => {
+            onScroll(x, y, dx, dy)
+        })
+        
+        var resetBtn = Button("Reset Score")
+        resetBtn.setOnClickListener(() => {
+            resetScore()
+        })
+        layout.addView(resetBtn)
+        
+        setContentView(layout)
+    }
+    
+    fun onTap(x: Float, y: Float) {
+        score = score + 1
+        scoreText.setText("Score: " + score)
+        showToast("Tap! +1 point")
+    }
+    
+    fun onLongPress(x: Float, y: Float) {
+        score = score + 5
+        scoreText.setText("Score: " + score)
+        showToast("Long Press! +5 points")
+    }
+    
+    fun onSwipe(x1: Float, y1: Float, x2: Float, y2: Float) {
+        score = score + 3
+        scoreText.setText("Score: " + score)
+        
+        val direction = getSwipeDirection(x1, y1, x2, y2)
+        showToast("Swipe " + direction + "! +3 points")
+    }
+    
+    fun onScroll(x: Float, y: Float, dx: Float, dy: Float) {
+        score = score + 1
+        scoreText.setText("Score: " + score)
+    }
+    
+    fun getSwipeDirection(x1: Float, y1: Float, x2: Float, y2: Float): String {
+        val dx = x2 - x1
+        val dy = y2 - y1
+        
+        if (dx > 0.0 && dx > dy) return "Right"
+        if (dx < 0.0 && dx < dy) return "Left"
+        if (dy > 0.0) return "Down"
+        return "Up"
+    }
+    
+    fun resetScore() {
+        score = 0
+        scoreText.setText("Score: 0")
+        showToast("Score reset!")
+    }
+}

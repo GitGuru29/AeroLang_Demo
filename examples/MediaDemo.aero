@@ -1,0 +1,58 @@
+// MediaDemo.aero
+// Demonstrates using the Multimedia APIs in AeroLang
+
+import ui
+import media
+
+class MediaDemoActivity : Activity {
+    var camera: Camera
+    var videoView: VideoView
+    var mediaPlayer: MediaPlayer
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Setup root layout
+        val root = LinearLayout(this)
+        root.setOrientation(LinearLayout.VERTICAL)
+        
+        // Setup Camera button
+        val btnCamera = Button(this)
+        btnCamera.setText("Take Picture")
+        btnCamera.setOnClickListener {
+            camera = Camera()
+            camera.setOutputPath("/storage/emulated/0/DCIM/Camera/aero_photo.jpg")
+            camera.takePicture()
+        }
+        root.addView(btnCamera)
+        
+        // Setup VideoView
+        videoView = VideoView(this)
+        // Just as an example, laying it out to fill space
+        // videoView.setLayoutParams(LayoutParams.MATCH_PARENT, 600)
+        
+        val btnPlayVideo = Button(this)
+        btnPlayVideo.setText("Play Sample Video")
+        btnPlayVideo.setOnClickListener {
+            videoView.setVideoPath("https://www.w3schools.com/html/mov_bbb.mp4")
+            videoView.start()
+        }
+        
+        root.addView(btnPlayVideo)
+        root.addView(videoView)
+        
+        // Setup Audio Player
+        val btnPlayAudio = Button(this)
+        btnPlayAudio.setText("Play Audio")
+        btnPlayAudio.setOnClickListener {
+            mediaPlayer = MediaPlayer()
+            mediaPlayer.setDataSource("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3")
+            mediaPlayer.prepareAsync()
+            // In a real app we'd wait for onPrepared callback, but for simplicity:
+            // mediaPlayer.start()
+        }
+        root.addView(btnPlayAudio)
+        
+        setContentView(root)
+    }
+}

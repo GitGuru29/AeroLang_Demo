@@ -1,0 +1,146 @@
+// Instagram-style app with ViewPager and Tabs
+
+activity SocialMediaApp {
+    var viewPager: ViewPager
+    var tabLayout: TabLayout
+    var swipeRefresh: SwipeRefreshLayout
+    var mainLayout: LinearLayout
+    
+    fun onCreate() {
+        mainLayout = LinearLayout(Orientation::VERTICAL)
+        
+        // Create tabs
+        tabLayout = TabLayout()
+        tabLayout.addTab("Feed")
+        tabLayout.addTab("Explore")
+        tabLayout.addTab("Profile")
+        tabLayout.setOnTabSelectedListener((position) => {
+            showToast("Switched to tab: " + position)
+        })
+        mainLayout.addView(tabLayout)
+        
+        // Create ViewPager
+        viewPager = ViewPager()
+        
+        // Add pages
+        viewPager.addPage(createFeedPage())
+        viewPager.addPage(createExplorePage())
+        viewPager.addPage(createProfilePage())
+        
+        // Link tabs with ViewPager
+        tabLayout.setupWithViewPager(viewPager)
+        
+        // Page change listener
+        viewPager.setOnPageChangeListener((position) => {
+            showToast("Viewing: " + getPageName(position))
+        })
+        
+        mainLayout.addView(viewPager)
+        setContentView(mainLayout)
+    }
+    
+    fun createFeedPage(): LinearLayout {
+        var page = LinearLayout(Orientation::VERTICAL)
+        page.setPadding(20, 20, 20, 20)
+        
+        // Pull to refresh wrapper
+        swipeRefresh = SwipeRefreshLayout()
+        swipeRefresh.setOnRefreshListener(() => {
+            refreshFeed()
+        })
+        swipeRefresh.setColorSchemeColors(0xFF4285F4, 0xFF34A853, 0xFFFBBC05)
+        
+        var feedLayout = LinearLayout(Orientation::VERTICAL)
+        
+        var title = TextView("Your Feed")
+        title.setTextSize(24.0)
+        feedLayout.addView(title)
+        
+        // Add some posts
+        feedLayout.addView(createPost("Alice", "Beautiful day! 🌞"))
+        feedLayout.addView(createPost("Bob", "Check out my new project!"))
+        feedLayout.addView(createPost("Charlie", "Just finished marathon 🏃"))
+        
+        swipeRefresh.addView(feedLayout)
+        page.addView(swipeRefresh)
+        
+        return page
+    }
+    
+    fun createExplorePage(): LinearLayout {
+        var page = LinearLayout(Orientation::VERTICAL)
+        page.setPadding(20, 20, 20, 20)
+        
+        var title = TextView("Explore")
+        title.setTextSize(24.0)
+        page.addView(title)
+        
+        var subtitle = TextView("Discover new content")
+        page.addView(subtitle)
+        
+        return page
+    }
+    
+    fun createProfilePage(): LinearLayout {
+        var page = LinearLayout(Orientation::VERTICAL)
+        page.setPadding(20, 20, 20, 20)
+        
+        var title = TextView("Your Profile")
+        title.setTextSize(24.0)
+        page.addView(title)
+        
+        var username = TextView("@johndoe")
+        page.addView(username)
+        
+        var bio = TextView("Software developer | Coffee lover ☕")
+        page.addView(bio)
+        
+        var followersBtn = Button("100 Followers")
+        followersBtn.setOnClickListener(() => {
+            showFollowers()
+        })
+        page.addView(followersBtn)
+        
+        return page
+    }
+    
+    fun createPost(author: String, content: String): LinearLayout {
+        var postLayout = LinearLayout(Orientation::VERTICAL)
+        postLayout.setPadding(10, 10, 10, 10)
+        
+        var authorText = TextView(author)
+        authorText.setTextSize(16.0)
+        postLayout.addView(authorText)
+        
+        var contentText = TextView(content)
+        postLayout.addView(contentText)
+        
+        var likeBtn = Button("❤️ Like")
+        likeBtn.setOnClickListener(() => {
+            showToast("Liked " + author + "'s post!")
+        })
+        postLayout.addView(likeBtn)
+        
+        return postLayout
+    }
+    
+    fun refreshFeed() {
+        showToast("Refreshing feed...")
+        // Simulate network request
+        swipeRefresh.setRefreshing(false)
+    }
+    
+    fun getPageName(position: Int): String {
+        if (position == 0) return "Feed"
+        if (position == 1) return "Explore"
+        return "Profile"
+    }
+    
+    fun showFollowers() {
+        var dialog = AlertDialog::Builder()
+        dialog.setTitle("Followers")
+              .setMessage("You have 100 followers!")
+              .setPositiveButton("OK", () => {})
+              .show()
+    }
+}

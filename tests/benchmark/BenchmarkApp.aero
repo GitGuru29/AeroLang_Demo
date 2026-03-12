@@ -1,0 +1,26 @@
+activity BenchmarkActivity {
+    val iterationCount: Int = 10000
+
+    fun onCreate() {
+        setContentView(1) // Placeholder layout
+        val targetViewId: Int = 100
+        val targetView: View = findViewById(targetViewId)
+        
+        Log.i("AeroLang", "Starting AeroLang JNI Benchmark...")
+        
+        for (i in 0..iterationCount) {
+            // This leverages the newly optimized JNICache::textViewSetText under the hood
+            targetView.setText("Iteration")
+            
+            // This tests UI view layout flag toggling heavily
+            if (i == 100) {
+                targetView.setVisibility(true)
+            } else {
+                targetView.setVisibility(false)
+            }
+        }
+        
+        Log.i("AeroLang", "AeroLang Benchmark Complete!")
+        showToast("Benchmark Complete")
+    }
+}

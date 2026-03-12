@@ -1,0 +1,107 @@
+// Settings App demonstrating all UI components
+
+activity SettingsApp {
+    var layout: ScrollView
+    var mainLayout: LinearLayout
+    
+    // Components
+    var darkModeSwitch: Switch
+    var notificationsCheckbox: CheckBox
+    var volumeSeekBar: SeekBar
+    var volumeText: TextView
+    var profileImage: ImageView
+    var saveButton: Button
+    
+    fun onCreate() {
+        // Main scrollable layout
+        layout = ScrollView()
+        mainLayout = LinearLayout(Orientation::VERTICAL)
+        mainLayout.setPadding(30, 30, 30, 30)
+        
+        // Title
+        var title = TextView("Settings")
+        title.setTextSize(32.0)
+        mainLayout.addView(title)
+        
+        // Profile Image
+        profileImage = ImageView()
+        profileImage.setImageResource(R.drawable.profile_default)
+        profileImage.setScaleType(1)  // CENTER_CROP
+        mainLayout.addView(profileImage)
+        
+        // Dark Mode Switch
+        var darkModeLayout = LinearLayout(Orientation::HORIZONTAL)
+        var darkLabel = TextView("Dark Mode")
+        darkModeSwitch = Switch()
+        darkModeSwitch.setOnCheckedChangeListener((checked) => {
+            applyTheme(checked)
+        })
+        darkModeLayout.addView(darkLabel)
+        darkModeLayout.addView(darkModeSwitch)
+        mainLayout.addView(darkModeLayout)
+        
+        // Notifications Checkbox
+        notificationsCheckbox = CheckBox("Enable Notifications")
+        notificationsCheckbox.setOnCheckedChangeListener((checked) => {
+            updateNotifications(checked)
+        })
+        mainLayout.addView(notificationsCheckbox)
+        
+        // Volume SeekBar
+        volumeText = TextView("Volume: 50%")
+        mainLayout.addView(volumeText)
+        
+        volumeSeekBar = SeekBar()
+        volumeSeekBar.setMax(100)
+        volumeSeekBar.setProgress(50)
+        volumeSeekBar.setOnSeekBarChangeListener((progress) => {
+            volumeText.setText("Volume: " + progress + "%")
+        })
+        mainLayout.addView(volumeSeekBar)
+        
+        // Progress indicator
+        var progressBar = ProgressBar()
+        progressBar.setMax(100)
+        progressBar.setProgress(75)
+        mainLayout.addView(progressBar)
+        
+        // Save Button
+        saveButton = Button("Save Settings")
+        saveButton.setOnClickListener(() => {
+            saveSettings()
+        })
+        mainLayout.addView(saveButton)
+        
+        layout.addView(mainLayout)
+        setContentView(layout)
+    }
+    
+    fun applyTheme(darkMode: Boolean) {
+        if (darkMode) {
+            showToast("Dark mode enabled")
+        } else {
+            showToast("Light mode enabled")
+        }
+    }
+    
+    fun updateNotifications(enabled: Boolean) {
+        if (enabled) {
+            showToast("Notifications enabled")
+        } else {
+            showToast("Notifications disabled")
+        }
+    }
+    
+    fun saveSettings() {
+        val builder = AlertDialog::Builder()
+        builder.setTitle("Save Settings")
+               .setMessage("Do you want to save these settings?")
+               .setPositiveButton("Save", () => {
+                   showToast("Settings saved!")
+               })
+               .setNegativeButton("Cancel", () => {
+                   showToast("Cancelled")
+               })
+               .show()
+    }
+}

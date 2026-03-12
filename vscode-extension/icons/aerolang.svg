@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="aeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00D2FF" />
+      <stop offset="100%" stop-color="#3A7BD5" />
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="50" fill="url(#aeroGrad)"/>
+  <path d="M128 40 L198 210 L168 210 L128 110 L88 210 L58 210 Z" fill="#FFFFFF"/>
+  <path d="M98 160 L158 160 L148 185 L108 185 Z" fill="#FFFFFF"/>
+</svg>

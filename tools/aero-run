@@ -1,0 +1,192 @@
+#!/bin/bash
+
+# AeroLang Run Tool
+# Builds, installs, and launches AeroLang app on connected device
+
+set -e
+
+VERSION="0.2.0"
+
+print_usage() {
+    echo "AeroLang Run Tool v$VERSION"
+    echo ""
+    echo "Usage: aero-run [OPTIONS] <project_dir>"
+    echo ""
+    echo "Options:"
+    echo "  --release      Build and install release APK"
+    echo "  --no-build     Skip build, just install and launch"
+    echo "  --device <id>  Target specific device (adb -s)"
+    echo "  -v, --verbose  Verbose output"
+    echo "  -h, --help     Show this help"
+}
+
+# Default values
+PROJECT_DIR=""
+BUILD_TYPE="debug"
+SKIP_BUILD=false
+DEVICE_ID=""
+VERBOSE=false
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --release)
+            BUILD_TYPE="release"
+            shift
+            ;;
+        --no-build)
+            SKIP_BUILD=true
+            shift
+            ;;
+        --device)
+            DEVICE_ID="$2"
+            shift 2
+            ;;
+        -v|--verbose)
+            VERBOSE=true
+            shift
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            PROJECT_DIR="$1"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$PROJECT_DIR" ]; then
+    log_error "No project directory specified"
+    print_usage
+    exit 1
+fi
+
+# Resolve absolute path
+PROJECT_DIR=$(cd "$PROJECT_DIR" && pwd)
+
+echo ""
+echo -e "${GREEN}🚀 AeroLang Run Tool v$VERSION${NC}"
+echo "================================"
+echo ""
+
+# Check for ADB
+if ! command -v adb &> /dev/null; then
+    log_error "ADB not found. Please install Android SDK platform-tools."
+    exit 1
+fi
+
+# Set up ADB command
+ADB_CMD="adb"
+if [ -n "$DEVICE_ID" ]; then
+    ADB_CMD="adb -s $DEVICE_ID"
+fi
+
+# Check for connected devices
+log_info "Checking for connected devices..."
+DEVICE_COUNT=$($ADB_CMD devices | grep -v "List" | grep -v "^$" | wc -l)
+
+if [ "$DEVICE_COUNT" -eq 0 ]; then
+    log_error "No devices connected"
+    echo ""
+    echo "Connect a device via USB or start an emulator:"
+    echo "  emulator -avd <avd_name>"
+    exit 1
+elif [ "$DEVICE_COUNT" -gt 1 ] && [ -z "$DEVICE_ID" ]; then
+    log_warning "Multiple devices found. Specify one with --device <id>"
+    echo ""
+    $ADB_CMD devices
+    exit 1
+fi
+
+DEVICE_NAME=$($ADB_CMD devices -l | grep -v "List" | grep -v "^$" | head -1 | awk '{print $1}')
+log_success "Device: $DEVICE_NAME"
+
+# Step 1: Build (unless skipped)
+if [ "$SKIP_BUILD" = false ]; then
+    log_info "Building APK..."
+    
+    BUILD_ARGS=""
+    if [ "$BUILD_TYPE" = "release" ]; then
+        BUILD_ARGS="--release"
+    fi
+    if [ "$VERBOSE" = true ]; then
+        BUILD_ARGS="$BUILD_ARGS --verbose"
+    fi
+    
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    "$SCRIPT_DIR/aero-build" $BUILD_ARGS "$PROJECT_DIR"
+    
+    log_success "Build complete"
+fi
+
+# Determine APK path
+APK_PATH="$PROJECT_DIR/build/app-$BUILD_TYPE.apk"
+if [ ! -f "$APK_PATH" ]; then
+    log_error "APK not found: $APK_PATH"
+    log_info "Run without --no-build to build first"
+    exit 1
+fi
+
+# Read package name from aero.toml or use default
+PACKAGE_NAME="com.aerolang.app"
+CONFIG_FILE="$PROJECT_DIR/aero.toml"
+if [ -f "$CONFIG_FILE" ] && grep -q "package_id" "$CONFIG_FILE"; then
+    PACKAGE_NAME=$(grep "package_id" "$CONFIG_FILE" | sed 's/.*= *"\([^"]*\)".*/\1/')
+fi
+
+# Step 2: Install APK
+log_info "Installing APK..."
+
+$ADB_CMD install -r "$APK_PATH" > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+    log_success "APK installed"
+else
+    log_error "Installation failed"
+    # Try with more verbose output
+    $ADB_CMD install -r "$APK_PATH"
+    exit 1
+fi
+
+# Step 3: Launch app
+log_info "Launching $PACKAGE_NAME..."
+
+MAIN_ACTIVITY="$PACKAGE_NAME.MainActivity"
+$ADB_CMD shell am start -n "$MAIN_ACTIVITY" > /dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    log_success "App launched"
+else
+    # Try alternative launch method
+    $ADB_CMD shell monkey -p "$PACKAGE_NAME" -c android.intent.category.LAUNCHER 1 > /dev/null 2>&1
+fi
+
+echo ""
+echo -e "${GREEN}✅ App running on device!${NC}"
+echo ""
+echo "View logs with: adb logcat -s AeroLang"
+echo ""

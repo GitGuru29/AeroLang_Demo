@@ -1,0 +1,284 @@
+#!/bin/bash
+
+# AeroLang Project Initialization Tool
+# Creates a new AeroLang project with proper structure
+
+set -e
+
+VERSION="0.2.0"
+
+print_usage() {
+    echo "AeroLang Project Initializer v$VERSION"
+    echo ""
+    echo "Usage: aero-init [OPTIONS] <project_name>"
+    echo ""
+    echo "Options:"
+    echo "  --package <id>    Package ID (default: com.example.<name>)"
+    echo "  --min-sdk <ver>   Minimum SDK version (default: 21)"
+    echo "  --template <t>    Template: empty, hello, navigation (default: hello)"
+    echo "  -h, --help        Show this help"
+}
+
+# Default values
+PROJECT_NAME=""
+PACKAGE_ID=""
+MIN_SDK=21
+TARGET_SDK=34
+TEMPLATE="hello"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+log_info() {
+    echo -e "${BLUE}ℹ${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}✓${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}⚠${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}✗${NC} $1"
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --package)
+            PACKAGE_ID="$2"
+            shift 2
+            ;;
+        --min-sdk)
+            MIN_SDK="$2"
+            shift 2
+            ;;
+        --template)
+            TEMPLATE="$2"
+            shift 2
+            ;;
+        -h|--help)
+            print_usage
+            exit 0
+            ;;
+        *)
+            PROJECT_NAME="$1"
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$PROJECT_NAME" ]; then
+    log_error "No project name specified"
+    print_usage
+    exit 1
+fi
+
+# Default package ID
+if [ -z "$PACKAGE_ID" ]; then
+    # Convert project name to valid package component
+    SAFE_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | tr '-' '_' | tr -cd 'a-z0-9_')
+    PACKAGE_ID="com.example.$SAFE_NAME"
+fi
+
+# Check if directory exists
+if [ -d "$PROJECT_NAME" ]; then
+    log_error "Directory '$PROJECT_NAME' already exists"
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}🚀 AeroLang Project Initializer v$VERSION${NC}"
+echo "========================================="
+echo ""
+
+log_info "Creating project: $PROJECT_NAME"
+log_info "Package: $PACKAGE_ID"
+log_info "Template: $TEMPLATE"
+echo ""
+
+# Create directory structure
+mkdir -p "$PROJECT_NAME/src"
+mkdir -p "$PROJECT_NAME/res/layout"
+mkdir -p "$PROJECT_NAME/res/drawable"
+mkdir -p "$PROJECT_NAME/res/values"
+
+# Create aero.toml
+cat > "$PROJECT_NAME/aero.toml" << EOF
+[package]
+name = "$PROJECT_NAME"
+version = "1.0.0"
+authors = []
+
+[android]
+package_id = "$PACKAGE_ID"
+min_sdk = $MIN_SDK
+target_sdk = $TARGET_SDK
+version_code = 1
+
+[dependencies]
+# Add dependencies here
+EOF
+
+log_success "Created aero.toml"
+
+# Create main activity based on template
+case $TEMPLATE in
+    empty)
+        cat > "$PROJECT_NAME/src/MainActivity.aero" << EOF
+// Main Activity
+activity MainActivity {
+    fun onCreate() {
+        // Your code here
+    }
+}
+EOF
+        ;;
+    hello)
+        cat > "$PROJECT_NAME/src/MainActivity.aero" << EOF
+// Main Activity - Hello World
+activity MainActivity {
+    var message: String = "Hello, AeroLang!"
+    
+    fun onCreate() {
+        showToast(message)
+    }
+    
+    fun onButtonClick() {
+        message = "Button clicked!"
+        showToast(message)
+    }
+}
+EOF
+        ;;
+    navigation)
+        cat > "$PROJECT_NAME/src/MainActivity.aero" << EOF
+// Main Activity with Navigation
+activity MainActivity {
+    fun onCreate() {
+        showToast("Welcome to $PROJECT_NAME!")
+    }
+    
+    fun openSecondScreen() {
+        var intent: Intent = Intent(SecondActivity)
+        intent.putExtra("greeting", "Hello from MainActivity")
+        startActivity(intent)
+    }
+}
+EOF
+        cat > "$PROJECT_NAME/src/SecondActivity.aero" << EOF
+// Second Activity
+activity SecondActivity {
+    var greeting: String = ""
+    
+    fun onCreate() {
+        var intent: Intent = getIntent()
+        greeting = intent.getStringExtra("greeting", "Hello!")
+        showToast(greeting)
+    }
+    
+    fun goBack() {
+        finish()
+    }
+}
+EOF
+        log_success "Created SecondActivity.aero"
+        ;;
+    *)
+        log_warning "Unknown template: $TEMPLATE, using 'hello'"
+        cat > "$PROJECT_NAME/src/MainActivity.aero" << EOF
+// Main Activity
+activity MainActivity {
+    fun onCreate() {
+        showToast("Hello, AeroLang!")
+    }
+}
+EOF
+        ;;
+esac
+
+log_success "Created MainActivity.aero"
+
+# Create basic strings resource
+cat > "$PROJECT_NAME/res/values/strings.xml" << EOF
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">$PROJECT_NAME</string>
+</resources>
+EOF
+
+log_success "Created strings.xml"
+
+# Create .gitignore
+cat > "$PROJECT_NAME/.gitignore" << EOF
+# Build outputs
+build/
+*.apk
+*.aab
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Gradle
+.gradle/
+local.properties
+EOF
+
+log_success "Created .gitignore"
+
+# Create README
+cat > "$PROJECT_NAME/README.md" << EOF
+# $PROJECT_NAME
+
+An AeroLang Android application.
+
+## Build
+
+\`\`\`bash
+aero-build .
+\`\`\`
+
+## Run
+
+\`\`\`bash
+aero-run .
+\`\`\`
+
+## Project Structure
+
+\`\`\`
+$PROJECT_NAME/
+├── aero.toml          # Project configuration
+├── src/               # AeroLang source files
+│   └── MainActivity.aero
+└── res/               # Android resources
+    ├── layout/
+    ├── drawable/
+    └── values/
+\`\`\`
+EOF
+
+log_success "Created README.md"
+
+echo ""
+echo -e "${GREEN}✅ Project created successfully!${NC}"
+echo ""
+echo "Next steps:"
+echo ""
+echo "  cd $PROJECT_NAME"
+echo "  aero-build ."
+echo "  aero-run ."
+echo ""
